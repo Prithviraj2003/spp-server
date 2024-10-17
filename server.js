@@ -12,6 +12,7 @@ app.get("/", (req, res) => {
   res.send("Hello world");
 });
 
+
 const Item = mongoose.model(
   "Item",
   new mongoose.Schema({ name: String, price: Number })
