@@ -27,9 +27,9 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-
+            ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
             sudo su -
-            
+
             rm -rf ~/spp-server || true
             mkdir ~/spp-server
 
