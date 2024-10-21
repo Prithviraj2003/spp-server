@@ -1,54 +1,38 @@
-name: Build and Deploy to EC2
+name: Deploy Express Server
 
 on:
   push:
     branches:
-      - main
+      - main  # Trigger deployment when changes are pushed to the 'main' branch
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Check Out Repo
-        uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Set Up Node.js
-        uses: actions/setup-node@v2
+      - name: Install SSH Key
+        uses: webfactory/ssh-agent@v0.8.1
         with:
-          node-version: "16"
-
-      - name: Install Dependencies
-        run: npm install
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}  # Add your private SSH key in GitHub Secrets
 
       - name: Deploy to EC2
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            rm -rf ~/spp-server || true
-            mkdir ~/spp-server
-            exit
+        run: |
+          ssh -o StrictHostKeyChecking=no ec2-user@${{ secrets.EC2_HOST }} << 'EOF'
+            # Navigate to your project directory on the EC2 instance
+            cd spp-server
 
-      - name: Copy Files to EC2
-        run: scp -r ./* ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/spp-server/
+            # Pull the latest changes from GitHub
+            git pull origin main
 
-      - name: Restart Application with PM2
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            cd ~/spp-server
+            # Install dependencies
             npm install
 
-            # Stop the existing PM2 process if it exists
-            pm2 stop server || true
+            # Restart the server using PM2
+            pm2 restart all || pm2 start server.js --name "your-app-name"
 
-            # Start the server using PM2 and name it 'server'
-            pm2 start server.js --name server
-
-            # Save the PM2 process list so it runs after reboot
-            pm2 save
+            # Restart NGINX to apply any config changes (optional)
+            sudo systemctl restart nginx
+          EOF
