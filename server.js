@@ -9,7 +9,7 @@ require("./config/dbConfig");
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.send("Hello From Server");
+  res.send("Hello From Server Side");
 });
 
 const Item = mongoose.model(
