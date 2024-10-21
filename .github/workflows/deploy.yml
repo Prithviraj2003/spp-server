@@ -37,17 +37,21 @@ jobs:
       - name: Copy Files to EC2
         run: scp -r ./* ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:~/spp-server/
 
-      - name: Restart Node Server on EC2
+      - name: Restart Application with PM2
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            sudo fuser -k 8888/tcp || true
-
             cd ~/spp-server
-
             npm install
 
-            nohup node server.js > server.log 2>&1 &
+            # Stop the existing PM2 process if it exists
+            pm2 stop server || true
+
+            # Start the server using PM2 and name it 'server'
+            pm2 start server.js --name server
+
+            # Save the PM2 process list so it runs after reboot
+            pm2 save
